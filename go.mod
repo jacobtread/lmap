@@ -1,3 +1,3 @@
-module github.com/jacobtread/go-locking-map
+module github.com/jacobtread/lmap
 
 go 1.18
