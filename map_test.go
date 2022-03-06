@@ -16,9 +16,14 @@ func ContentEquals[T string | int](a []T, b []T) bool {
 	if len(a) != len(b) {
 		return false
 	}
-	for i, aV := range a {
-		bV := b[i]
-		if aV != bV {
+	for _, aV := range a {
+		found := false
+		for _, bV := range b {
+			if aV == bV {
+				found = true
+			}
+		}
+		if !found {
 			return false
 		}
 	}
