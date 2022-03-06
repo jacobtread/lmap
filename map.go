@@ -101,6 +101,7 @@ func (m *LockingMap[K, V]) AnyMatch(test func(key K, value V) bool) bool {
 	m.Lock.RLock()
 	for k, v := range m.Underlying {
 		if test(k, v) {
+			m.Lock.RUnlock()
 			return true
 		}
 	}
@@ -114,6 +115,7 @@ func (m *LockingMap[K, V]) AllMatch(test func(key K, value V) bool) bool {
 	m.Lock.RLock()
 	for k, v := range m.Underlying {
 		if !test(k, v) {
+			m.Lock.RUnlock()
 			return false
 		}
 	}
