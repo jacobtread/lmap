@@ -4,18 +4,20 @@ import (
 	"sync"
 )
 
+// LockingMap The structure of a locking map
 type LockingMap[K string | uint | int, V any] struct {
 	Lock       *sync.RWMutex
 	Underlying map[K]V
 }
 
+// Entry represents a key value pair for the map
 type Entry[K string | uint | int, V any] struct {
 	Key   K
 	Value V
 }
 
 // NewMap constructor for creating new locking maps
-func NewMap[K string | uint | int, V any]() LockingMap[K, V] {
+func NewMap[K string | uint | int, V any | *any]() LockingMap[K, V] {
 	m := make(map[K]V)
 	out := LockingMap[K, V]{
 		Lock:       &sync.RWMutex{},
@@ -91,6 +93,32 @@ func (m *LockingMap[K, V]) ForEachUntil(action func(key K, value V) bool) {
 		}
 	}
 	m.Lock.RUnlock()
+}
+
+// AnyMatch returns whether any of the entries in the map match the
+// provided test function condition
+func (m *LockingMap[K, V]) AnyMatch(test func(key K, value V) bool) bool {
+	m.Lock.RLock()
+	for k, v := range m.Underlying {
+		if test(k, v) {
+			return true
+		}
+	}
+	m.Lock.RUnlock()
+	return false
+}
+
+// AllMatch returns whether all the entries in the map match the
+// provided test function condition
+func (m *LockingMap[K, V]) AllMatch(test func(key K, value V) bool) bool {
+	m.Lock.RLock()
+	for k, v := range m.Underlying {
+		if !test(k, v) {
+			return false
+		}
+	}
+	m.Lock.RUnlock()
+	return true
 }
 
 func (m *LockingMap[K, V]) Size() int {
@@ -230,6 +258,60 @@ func (m *LockingMap[K, V]) Clear() {
 	m.Lock.Unlock()
 }
 
+// ClearAnd Clears all entries from the map and runs the provided action
+// function on all the removed entries
+func (m *LockingMap[K, V]) ClearAnd(action func(key K, value V)) {
+	values := m.GetEntries()
+	m.Lock.Lock()
+	for _, entry := range values {
+		action(entry.Key, entry.Value)
+		delete(m.Underlying, entry.Key)
+	}
+	m.Lock.Unlock()
+}
+
+// SumOf Counts up the total number provided from each action function
+// call. Runs the action function on all the contents
+func (m *LockingMap[K, V]) SumOf(action func(key K, value V) int) int {
+	total := 0
+	m.Lock.RLock()
+	for k, v := range m.Underlying {
+		total += action(k, v)
+	}
+	m.Lock.RUnlock()
+	return total
+}
+
+// MaxOf Finds the largest returned result from the action function
+// that is run on all the entries in the map
+func (m *LockingMap[K, V]) MaxOf(action func(key K, value V) int) int {
+	max := 0
+	m.Lock.RLock()
+	for k, v := range m.Underlying {
+		value := action(k, v)
+		if value > max {
+			max = value
+		}
+	}
+	m.Lock.RUnlock()
+	return max
+}
+
+// MinOf Finds the smallest returned result from the action function
+// that is run on all the entries in the map
+func (m *LockingMap[K, V]) MinOf(action func(key K, value V) int) int {
+	min := -1
+	m.Lock.RLock()
+	for k, v := range m.Underlying {
+		value := action(k, v)
+		if min == -1 || value < min {
+			min = value
+		}
+	}
+	m.Lock.RUnlock()
+	return min
+}
+
 // GetValuePointers creates an array with pointers to all the values stored
 // inside the locking map.
 func (m *LockingMap[K, V]) GetValuePointers() []*V {
@@ -264,7 +346,7 @@ func (m *LockingMap[K, V]) GetKeys() []K {
 	m.Lock.RLock()
 	out := make([]K, m.Size())
 	i := 0
-	for k, _ := range m.Underlying {
+	for k := range m.Underlying {
 		out[i] = k
 		i++
 	}

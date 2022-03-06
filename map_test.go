@@ -332,3 +332,103 @@ func TestLockingMap_Clear(t *testing.T) {
 		t.FailNow()
 	}
 }
+
+func TestLockingMap_ClearAnd(t *testing.T) {
+	m := NewMap[string, int]()
+	PutJunkData(&m, 10)
+	removed := 0
+	m.ClearAnd(func(key string, value int) {
+		removed++
+	})
+	if m.Size() > 0 {
+		t.Logf("Expected map to be empty after ClearAnd() but had %d elements", m.Size())
+		t.FailNow()
+	}
+	if removed != 10 {
+		t.Logf("Expected clear and to iterate 10 times but iterated %d times", removed)
+		t.FailNow()
+	}
+}
+
+func TestLockingMap_AnyMatch(t *testing.T) {
+	m := NewMap[string, int]()
+	m.Put("Test", 1)
+	matches := m.AnyMatch(func(key string, value int) bool {
+		return value > 0
+	})
+	if !matches {
+		t.Log("Expected match")
+		t.FailNow()
+	}
+	matches = m.AnyMatch(func(key string, value int) bool {
+		return value != 1
+	})
+	if matches {
+		t.Log("Expected no matches")
+		t.FailNow()
+	}
+}
+
+func TestLockingMap_AllMatch(t *testing.T) {
+	m := NewMap[string, int]()
+	m.Put("Test", 1)
+	matches := m.AllMatch(func(key string, value int) bool {
+		return value > 0
+	})
+	if !matches {
+		t.Log("Expected match")
+		t.FailNow()
+	}
+	matches = m.AllMatch(func(key string, value int) bool {
+		return value != 1
+	})
+	if matches {
+		t.Log("Expected no matches")
+		t.FailNow()
+	}
+}
+
+func TestLockingMap_MaxOf(t *testing.T) {
+	m := NewMap[string, int]()
+	m.Put("Test", 1)
+	m.Put("Test1", 5)
+	m.Put("Test2", 2)
+	m.Put("Test3", 9)
+	max := m.MaxOf(func(key string, value int) int {
+		return value
+	})
+	if max != 9 {
+		t.Logf("Expected max value to be 9 got %d instead", max)
+		t.FailNow()
+	}
+}
+
+func TestLockingMap_MinOf(t *testing.T) {
+	m := NewMap[string, int]()
+	m.Put("Test", 1)
+	m.Put("Test1", 5)
+	m.Put("Test2", 2)
+	m.Put("Test3", 9)
+	min := m.MinOf(func(key string, value int) int {
+		return value
+	})
+	if min != 1 {
+		t.Logf("Expected min value to be 1 got %d instead", min)
+		t.FailNow()
+	}
+}
+
+func TestLockingMap_SumOf(t *testing.T) {
+	m := NewMap[string, int]()
+	m.Put("Test", 2)
+	m.Put("Test1", 2)
+	m.Put("Test2", 2)
+	m.Put("Test3", 2)
+	min := m.SumOf(func(key string, value int) int {
+		return value
+	})
+	if min != 8 {
+		t.Logf("Expected sum value to be 8 got %d instead", min)
+		t.FailNow()
+	}
+}
